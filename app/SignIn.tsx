@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { router } from "expo-router";
 
 export default function SignIn({ navigation }: any) {
@@ -10,9 +11,20 @@ export default function SignIn({ navigation }: any) {
 
   const handleSignIn = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert("Success", "You are signed in!");
-      router.push("/Home"); // Redirect to home or dashboard
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userId = userCredential.user.uid;
+
+      // Fetch user role from Firestore
+      const ownerDoc = await getDoc(doc(db, "owners", userId));
+      const driverDoc = await getDoc(doc(db, "drivers", userId));
+
+      if (ownerDoc.exists()) {
+        router.replace("/owner/Dashboard"); // Navigate to owner dashboard
+      } else if (driverDoc.exists()) {
+        router.replace("/driver/Home"); // Navigate to driver home
+      } else {
+        Alert.alert("Error", "No profile found for this account!");
+      }
     } catch (error: any) {
       Alert.alert("Error", error.message);
     }

@@ -12,7 +12,7 @@ export default function SignUp({ navigation }: any) {
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       Alert.alert("Success", "Account created!");
-      router.push("/SignIn");
+      router.replace("/RoleSelection");
     } catch (error: any) {
       Alert.alert("Error", error.message);
     }
