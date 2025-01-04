@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal, TextInput, S
 import { Picker } from "@react-native-picker/picker";
 import { auth, db } from "../../firebase";
 import { router } from "expo-router";
-import { collection, getDocs, doc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, deleteDoc } from "firebase/firestore";
 import Toast from "react-native-toast-message";
 import { SpinnerContext } from "../_layout";
 import { Ionicons } from "@expo/vector-icons";
@@ -30,14 +30,38 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<UnitType>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("none");
+  const [fullName, setFullName] = useState<string | null>(null);
   const user = auth.currentUser;
 
   useEffect(() => {
     if (!user) {
       router.replace("/SignIn");
+    } else {
+      fetchUserFullName();
     }
     fetchUnits();
   }, []);
+
+  const fetchUserFullName = async () => {
+    try {
+      showSpinner();
+      if (!user) {
+        console.error("User is not authenticated");
+        return;
+      }
+      const userDoc = await getDoc(doc(db, "owners", user.uid));
+      if (userDoc.exists()) {
+        const { firstName, lastName } = userDoc.data();
+        setFullName(`${firstName} ${lastName}`); // Combine firstName and lastName
+      } else {
+        console.error("User document not found");
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      hideSpinner();
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -73,7 +97,7 @@ export default function Dashboard() {
           name: data.name,
           type: data.type,
           rate: data.rate,
-          rateFrequency: data.rateFrequency || "daily",
+          rateFrequency: data.rateFrequency || "Daily",
           ownerId: data.ownerId,
         };
       });
@@ -137,7 +161,7 @@ export default function Dashboard() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Welcome, Owner!</Text>
+        <Text style={styles.title}>Welcome, {fullName ? fullName : "Owner"}!</Text>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <Ionicons name="log-out-outline" size={24} color={colors.primary} />
         </TouchableOpacity>
