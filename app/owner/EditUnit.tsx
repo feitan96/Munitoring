@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import { View, Text, TextInput, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Modal, FlatList, TouchableOpacity } from "react-native";
 import { db } from "../../firebase";
-import { doc, getDoc, updateDoc, serverTimestamp, DocumentData } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp, DocumentData, collection, getDocs } from "firebase/firestore";
 import { useLocalSearchParams, router } from "expo-router";
 import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,10 +32,14 @@ export default function EditUnit() {
   const [description, setDescription] = useState("");
   const [rate, setRate] = useState("");
   const [rateFrequency, setRateFrequency] = useState(rateFrequencies[0]);
+  const [drivers, setDrivers] = useState<{ id: string; firstName: string; lastName: string }[]>([]); // State to store list of drivers
+  const [selectedDriver, setSelectedDriver] = useState(null); // Selected driver
+  const [isDriverPickerVisible, setIsDriverPickerVisible] = useState(false); // Driver picker visibility
 
   const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
   const [isTypePickerVisible, setIsTypePickerVisible] = useState(false);
   const [isFrequencyPickerVisible, setIsFrequencyPickerVisible] = useState(false);
+  
 
   useEffect(() => {
     const fetchUnit = async () => {
@@ -60,6 +64,7 @@ export default function EditUnit() {
           setDescription(data.description);
           setRate(data.rate.toString());
           setRateFrequency(data.rateFrequency || rateFrequencies[0]);
+          setSelectedDriver(data.driverAssigned || null);
         } else {
           Toast.show({
             type: "error",
@@ -73,12 +78,30 @@ export default function EditUnit() {
           text1: "Error",
           text2: "Failed to fetch unit details.",
         });
-      }finally {
+      } finally {
         hideSpinner();
       }
     };
 
+    const fetchDrivers = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "drivers"));
+        const driversList = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            firstName: data.firstName,
+            lastName: data.lastName,
+          };
+        });
+        setDrivers(driversList);
+      } catch (error) {
+        console.error("Error fetching drivers:", error);
+      }
+    };
+
     fetchUnit();
+    fetchDrivers();
   }, [id]);
 
   const validateFields = () => {
@@ -118,6 +141,7 @@ export default function EditUnit() {
         description,
         rate: parseFloat(rate),
         rateFrequency,
+        driverAssigned: selectedDriver,
         dateUpdated: serverTimestamp(),
       });
       Toast.show({
@@ -160,6 +184,17 @@ export default function EditUnit() {
     </TouchableOpacity>
   );
 
+  const renderDriverItem = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={styles.typeItem}
+      onPress={() => {
+        setSelectedDriver(item.id);
+        setIsDriverPickerVisible(false);
+      }}
+    >
+      <Text style={styles.typeLabel}>{`${item.firstName} ${item.lastName}`}</Text>
+    </TouchableOpacity>
+  );
   if (!unit) return null;
 
   return (
@@ -239,6 +274,22 @@ export default function EditUnit() {
           {errors.rateFrequency && <Text style={styles.errorText}>Please select a rate frequency.</Text>}
         </View>
 
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Assign Driver</Text>
+          <TouchableOpacity
+            style={[styles.pickerButton, errors.driverAssigned && styles.errorInput]}
+            onPress={() => setIsDriverPickerVisible(true)}
+          >
+            <Text style={styles.pickerButtonText}>
+              {selectedDriver
+                ? drivers.find(driver => driver.id === selectedDriver)?.firstName + " " + drivers.find(driver => driver.id === selectedDriver)?.lastName
+                : "Select a driver"}
+            </Text>
+            <Ionicons name="chevron-down" size={24} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save Changes</Text>
         </TouchableOpacity>
@@ -288,6 +339,32 @@ export default function EditUnit() {
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setIsFrequencyPickerVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Driver Picker Modal */}
+      <Modal
+        visible={isDriverPickerVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsDriverPickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select a Driver</Text>
+            <FlatList
+              data={drivers}
+              renderItem={renderDriverItem}
+              keyExtractor={(item) => item.id}
+              style={styles.typeList}
+            />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setIsDriverPickerVisible(false)}
             >
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>
