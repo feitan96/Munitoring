@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { View, Text, TextInput, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Modal, FlatList, TouchableOpacity } from "react-native";
 import { db } from "../../firebase";
 import { doc, getDoc, updateDoc, serverTimestamp, DocumentData } from "firebase/firestore";
 import { useLocalSearchParams, router } from "expo-router";
 import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
+import { SpinnerContext } from "../_layout";
 
 interface UnitType {
   label: string;
@@ -22,6 +23,7 @@ const unitTypes: UnitType[] = [
 const rateFrequencies = ["Daily", "Weekly", "Monthly", "Yearly"];
 
 export default function EditUnit() {
+  const { showSpinner, hideSpinner } = useContext(SpinnerContext);
   const { id } = useLocalSearchParams();
   const [unit, setUnit] = useState<DocumentData | null>(null);
 
@@ -38,6 +40,7 @@ export default function EditUnit() {
   useEffect(() => {
     const fetchUnit = async () => {
       try {
+        showSpinner();
         if (!id || typeof id !== "string") {
           Toast.show({
             type: "error",
@@ -70,6 +73,8 @@ export default function EditUnit() {
           text1: "Error",
           text2: "Failed to fetch unit details.",
         });
+      }finally {
+        hideSpinner();
       }
     };
 

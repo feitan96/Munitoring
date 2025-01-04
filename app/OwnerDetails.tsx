@@ -1,41 +1,70 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
 import { auth, db } from "../firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { router } from "expo-router";
 
 export default function OwnerDetailsScreen() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [address, setAddress] = useState("");
 
   const handleSave = async () => {
-    const user = auth.currentUser;
-    if (!user) {
-      Alert.alert("Error", "User not authenticated");
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match.");
       return;
     }
 
     try {
-      await setDoc(doc(db, "owners", user.uid), {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userId = userCredential.user.uid;
+
+      await setDoc(doc(db, "owners", userId), {
         firstName,
         lastName,
         contactNumber,
         address,
+        email,
         role: "owner",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
-      Alert.alert("Success", "Owner details saved successfully!");
-      router.replace("/owner/Dashboard"); // Redirect to owner dashboard
+      Alert.alert("Success", "Owner account created successfully!");
+      router.replace("/owner/Dashboard");
     } catch (error: any) {
       Alert.alert("Error", error.message);
     }
   };
 
-   return (
+  return (
     <View style={styles.container}>
       <Text style={styles.title}>Owner Details</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Confirm Password"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        secureTextEntry
+      />
       <TextInput
         style={styles.input}
         placeholder="First Name"
