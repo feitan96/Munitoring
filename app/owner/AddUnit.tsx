@@ -19,13 +19,17 @@ const unitTypes: UnitType[] = [
   { label: "Others", value: "others", icon: "ellipsis-horizontal" },
 ];
 
+const rateFrequencies = ["Daily", "Weekly", "Monthly", "Yearly"];
+
 export default function AddUnit() {
   const [name, setName] = useState("");
   const [type, setType] = useState<UnitType>(unitTypes[0]);
   const [description, setDescription] = useState("");
   const [rate, setRate] = useState("");
+  const [rateFrequency, setRateFrequency] = useState("Daily");
   const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
   const [isTypePickerVisible, setIsTypePickerVisible] = useState(false);
+  const [isFrequencyPickerVisible, setIsFrequencyPickerVisible] = useState(false);
 
   const validateFields = () => {
     const newErrors: { [key: string]: boolean } = {};
@@ -67,6 +71,7 @@ export default function AddUnit() {
         type: type.value,
         description,
         rate: parseFloat(rate),
+        rateFrequency,
         driverAssigned: null,
         dateCreated: serverTimestamp(),
         dateUpdated: serverTimestamp(),
@@ -101,6 +106,18 @@ export default function AddUnit() {
       <Text style={styles.typeLabel}>{item.label}</Text>
     </TouchableOpacity>
   );
+
+    const renderFrequencyItem = ({ item }: { item: string }) => (
+      <TouchableOpacity
+        style={styles.typeItem}
+        onPress={() => {
+          setRateFrequency(item);
+          setIsFrequencyPickerVisible(false);
+        }}
+      >
+        <Text style={styles.typeLabel}>{item}</Text>
+      </TouchableOpacity>
+    );
 
   return (
     <KeyboardAvoidingView 
@@ -167,6 +184,18 @@ export default function AddUnit() {
           {errors.rate && <Text style={styles.errorText}>Please enter a valid rate.</Text>}
         </View>
 
+        <View style={styles.formGroup}>
+                  <Text style={styles.label}>Rate Frequency</Text>
+                  <TouchableOpacity
+                    style={[styles.pickerButton, errors.rateFrequency && styles.errorInput]}
+                    onPress={() => setIsFrequencyPickerVisible(true)}
+                  >
+                    <Text style={styles.pickerButtonText}>{rateFrequency}</Text>
+                    <Ionicons name="chevron-down" size={24} color={colors.primary} />
+                  </TouchableOpacity>
+                  {errors.rateFrequency && <Text style={styles.errorText}>Please select a rate frequency.</Text>}
+                </View>
+
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save Unit</Text>
         </TouchableOpacity>
@@ -196,6 +225,32 @@ export default function AddUnit() {
           </View>
         </View>
       </Modal>
+
+      {/* Rate Frequency Picker Modal */}
+            <Modal
+              visible={isFrequencyPickerVisible}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setIsFrequencyPickerVisible(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>Select Rate Frequency</Text>
+                  <FlatList
+                    data={rateFrequencies}
+                    renderItem={renderFrequencyItem}
+                    keyExtractor={(item) => item}
+                    style={styles.typeList}
+                  />
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => setIsFrequencyPickerVisible(false)}
+                  >
+                    <Text style={styles.closeButtonText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -340,5 +395,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+
+    // Add styles for the rate field and picker container
+    rateContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    rateInput: {
+      flex: 1,
+      marginRight: 8,
+    },
+    picker: {
+      flex: 1,
+    },
 });
 

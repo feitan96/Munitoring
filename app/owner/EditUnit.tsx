@@ -19,6 +19,8 @@ const unitTypes: UnitType[] = [
   { label: "Others", value: "others", icon: "ellipsis-horizontal" },
 ];
 
+const rateFrequencies = ["Daily", "Weekly", "Monthly", "Yearly"];
+
 export default function EditUnit() {
   const { id } = useLocalSearchParams();
   const [unit, setUnit] = useState<DocumentData | null>(null);
@@ -27,9 +29,11 @@ export default function EditUnit() {
   const [type, setType] = useState<UnitType>(unitTypes[0]);
   const [description, setDescription] = useState("");
   const [rate, setRate] = useState("");
+  const [rateFrequency, setRateFrequency] = useState(rateFrequencies[0]);
 
   const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
   const [isTypePickerVisible, setIsTypePickerVisible] = useState(false);
+  const [isFrequencyPickerVisible, setIsFrequencyPickerVisible] = useState(false);
 
   useEffect(() => {
     const fetchUnit = async () => {
@@ -52,6 +56,7 @@ export default function EditUnit() {
           setType(unitTypes.find(t => t.value === data.type) || unitTypes[0]);
           setDescription(data.description);
           setRate(data.rate.toString());
+          setRateFrequency(data.rateFrequency || rateFrequencies[0]);
         } else {
           Toast.show({
             type: "error",
@@ -77,6 +82,7 @@ export default function EditUnit() {
     if (!type) newErrors.type = true;
     if (!description) newErrors.description = true;
     if (!rate || isNaN(parseFloat(rate))) newErrors.rate = true;
+    if (!rateFrequency) newErrors.rateFrequency = true;
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -106,6 +112,7 @@ export default function EditUnit() {
         type: type.value,
         description,
         rate: parseFloat(rate),
+        rateFrequency,
         dateUpdated: serverTimestamp(),
       });
       Toast.show({
@@ -133,6 +140,18 @@ export default function EditUnit() {
     >
       <Ionicons name={item.icon as any} size={24} color={colors.primary} style={styles.typeIcon} />
       <Text style={styles.typeLabel}>{item.label}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderFrequencyItem = ({ item }: { item: string }) => (
+    <TouchableOpacity
+      style={styles.typeItem}
+      onPress={() => {
+        setRateFrequency(item);
+        setIsFrequencyPickerVisible(false);
+      }}
+    >
+      <Text style={styles.typeLabel}>{item}</Text>
     </TouchableOpacity>
   );
 
@@ -203,6 +222,18 @@ export default function EditUnit() {
           {errors.rate && <Text style={styles.errorText}>Please enter a valid rate.</Text>}
         </View>
 
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Rate Frequency</Text>
+          <TouchableOpacity
+            style={[styles.pickerButton, errors.rateFrequency && styles.errorInput]}
+            onPress={() => setIsFrequencyPickerVisible(true)}
+          >
+            <Text style={styles.pickerButtonText}>{rateFrequency}</Text>
+            <Ionicons name="chevron-down" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          {errors.rateFrequency && <Text style={styles.errorText}>Please select a rate frequency.</Text>}
+        </View>
+
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save Changes</Text>
         </TouchableOpacity>
@@ -226,6 +257,32 @@ export default function EditUnit() {
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setIsTypePickerVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Rate Frequency Picker Modal */}
+      <Modal
+        visible={isFrequencyPickerVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsFrequencyPickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Rate Frequency</Text>
+            <FlatList
+              data={rateFrequencies}
+              renderItem={renderFrequencyItem}
+              keyExtractor={(item) => item}
+              style={styles.typeList}
+            />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setIsFrequencyPickerVisible(false)}
             >
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>

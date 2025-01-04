@@ -14,6 +14,7 @@ interface Unit {
   name: string;
   type: string;
   rate: number;
+  rateFrequency: string;
   ownerId: string;
 }
 
@@ -72,6 +73,7 @@ export default function Dashboard() {
           name: data.name,
           type: data.type,
           rate: data.rate,
+          rateFrequency: data.rateFrequency || "daily",
           ownerId: data.ownerId,
         };
       });
@@ -216,7 +218,7 @@ export default function Dashboard() {
               <View style={styles.typeTag}>
                 <Text style={styles.typeTagText}>{item.type}</Text>
               </View>
-              <Text style={styles.unitInfo}>PHP {item.rate}/day</Text>
+              <Text style={styles.unitInfo}>PHP {item.rate.toFixed(2)} {item.rateFrequency}</Text>
             </View>
             <View style={styles.buttonGroup}>
               <TouchableOpacity 
