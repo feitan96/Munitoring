@@ -7,9 +7,9 @@ export default function OwnerLayout() {
     <>
       <Stack>
         <Stack.Screen name="Dashboard" options={{ title: "Dashboard" }} />
-        <Stack.Screen name="AddUnit" options={{ title: "AddUnit" }} />
-        <Stack.Screen name="EditUnit" options={{ title: "EditUnit" }} />
-        <Stack.Screen name="ViewUnit" options={{ title: "ViewUnit" }} />
+        <Stack.Screen name="AddUnit" options={{ title: "AddUnit", headerShown: false }} />
+        <Stack.Screen name="EditUnit" options={{ title: "EditUnit", headerShown: false }} />
+        <Stack.Screen name="ViewUnit" options={{ title: "ViewUnit", headerShown: false }} />
         <Toast />
       </Stack>
       <Toast />
