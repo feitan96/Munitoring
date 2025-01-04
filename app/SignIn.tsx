@@ -1,19 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { router } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
+import { SpinnerContext } from "../app/_layout";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { showSpinner, hideSpinner } = useContext(SpinnerContext);
 
   const handleSignIn = async () => {
     if (isLoading) return;
     setIsLoading(true);
+    showSpinner();
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const userId = userCredential.user.uid;
@@ -32,6 +35,7 @@ export default function SignIn() {
     } catch (error: any) {
       Alert.alert("Error", error.message);
     } finally {
+      hideSpinner();
       setIsLoading(false);
     }
   };
@@ -74,7 +78,7 @@ export default function SignIn() {
           <Text style={styles.buttonText}>{isLoading ? "Signing In..." : "Sign In"}</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity onPress={() => router.push("/SignUp")}>
+        <TouchableOpacity onPress={() => router.push("/RoleSelection")}>
           <Text style={styles.linkText}>Don't have an account? <Text style={styles.link}>Sign Up</Text></Text>
         </TouchableOpacity>
       </View>
