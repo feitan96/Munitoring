@@ -13,7 +13,7 @@ interface Unit {
   description: string;
   rate: number;
   rateFrequency: string;
-  driverAssigned: string | null;
+  ownerId: string;
   cashIn: number;
   cashOut: number;
   cashFlow: number;
@@ -21,16 +21,17 @@ interface Unit {
   dateUpdated: { seconds: number };
 }
 
-export default function ViewUnit() {
+export default function ViewAssignedUnit() {
   const { showSpinner, hideSpinner } = useContext(SpinnerContext);
   const { id } = useLocalSearchParams();
   const [unit, setUnit] = useState<Unit | null>(null);
-  const [driverName, setDriverName] = useState("None");
+  const [ownerName, setOwnerName] = useState("");
 
   useEffect(() => {
-    const fetchUnit = async () => {
+    const fetchUnitAndOwner = async () => {
       try {
         showSpinner();
+
         if (!id || typeof id !== "string") {
           Toast.show({
             type: "error",
@@ -39,11 +40,25 @@ export default function ViewUnit() {
           });
           return;
         }
-        const docRef = doc(db, "units", id);
-        const snapshot = await getDoc(docRef);
 
-        if (snapshot.exists()) {
-          setUnit(snapshot.data() as Unit);
+        // Fetch unit details
+        const unitRef = doc(db, "units", id);
+        const unitSnapshot = await getDoc(unitRef);
+
+        if (unitSnapshot.exists()) {
+          const unitData = unitSnapshot.data() as Unit;
+          setUnit(unitData);
+
+          // Fetch owner's name using ownerId
+          const ownerRef = doc(db, "owners", unitData.ownerId);
+          const ownerSnapshot = await getDoc(ownerRef);
+
+          if (ownerSnapshot.exists()) {
+            const { firstName, lastName } = ownerSnapshot.data();
+            setOwnerName(`${firstName} ${lastName}`);
+          } else {
+            setOwnerName("Unknown Owner");
+          }
         } else {
           Toast.show({
             type: "error",
@@ -57,36 +72,13 @@ export default function ViewUnit() {
           text1: "Error",
           text2: "Failed to fetch unit details.",
         });
-      }finally {
+      } finally {
         hideSpinner();
       }
     };
 
-    fetchUnit();
+    fetchUnitAndOwner();
   }, [id]);
-
-  // Fetch driver full name if a driver is assigned
-  useEffect(() => {
-    const fetchDriverName = async () => {
-      try {
-        if (unit?.driverAssigned) {
-          const driverRef = doc(db, "drivers", unit.driverAssigned);
-          const driverSnapshot = await getDoc(driverRef);
-
-          if (driverSnapshot.exists()) {
-            const { firstName, lastName } = driverSnapshot.data();
-            setDriverName(`${firstName} ${lastName}`);
-          } else {
-            setDriverName("Unknown Driver");
-          }
-        }
-      } catch (error) {
-        setDriverName("Error fetching driver");
-      }
-    };
-
-    if (unit?.driverAssigned) fetchDriverName();
-  }, [unit]);
 
   if (!unit) return null;
 
@@ -116,14 +108,14 @@ export default function ViewUnit() {
           <Ionicons name="cash" size={24} color={colors.primary} style={styles.icon} />
           <Text style={styles.label}>Rate:</Text>
           <Text style={styles.value}>
-            PHP {unit.rate} {unit.rateFrequency ? `${unit.rateFrequency}` : ""}
+            PHP {unit.rate.toFixed(2)} {unit.rateFrequency}
           </Text>
         </View>
 
         <View style={styles.row}>
           <Ionicons name="person" size={24} color={colors.primary} style={styles.icon} />
-          <Text style={styles.label}>Driver Assigned:</Text>
-          <Text style={styles.value}>{driverName}</Text>
+          <Text style={styles.label}>Owner:</Text>
+          <Text style={styles.value}>{ownerName}</Text>
         </View>
       </View>
 
@@ -149,46 +141,19 @@ export default function ViewUnit() {
           </Text>
         </View>
       </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Dates</Text>
-        <View style={styles.row}>
-          <Ionicons name="calendar" size={24} color={colors.primary} style={styles.icon} />
-          <Text style={styles.label}>Created:</Text>
-          <Text style={styles.value}>
-            {new Date(unit.dateCreated.seconds * 1000).toLocaleDateString()}
-          </Text>
-        </View>
-
-        <View style={styles.row}>
-          <Ionicons name="calendar" size={24} color={colors.primary} style={styles.icon} />
-          <Text style={styles.label}>Updated:</Text>
-          <Text style={styles.value}>
-            {new Date(unit.dateUpdated.seconds * 1000).toLocaleDateString()}
-          </Text>
-        </View>
-      </View>
-
-      <TouchableOpacity
-        style={styles.editButton}
-        onPress={() => router.push(`/owner/EditUnit?id=${id}`)}
-      >
-        <Ionicons name="create" size={24} color={colors.background} />
-        <Text style={styles.editButtonText}>Edit Unit</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const colors = {
-  primary: "#393E46",    // Dark grayish blue
-  secondary: "#6D9886",  // Sage green
-  background: "#F7F7F7", // Pure off-white
-  card: "#F2E7D5",       // Warm beige
-  text: "#393E46",       // Dark grayish blue
-  muted: "#6D9886",      // Sage green
-  border: "#F2E7D5",     // Warm beige
-  danger: "#E74C3C",     // Red for errors
+  primary: "#393E46",
+  secondary: "#6D9886",
+  background: "#F7F7F7",
+  card: "#F2E7D5",
+  text: "#393E46",
+  muted: "#6D9886",
+  border: "#F2E7D5",
+  danger: "#E74C3C",
 };
 
 const styles = StyleSheet.create({
@@ -197,8 +162,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -208,7 +173,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.text,
     marginLeft: 16,
   },
@@ -221,13 +186,13 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: colors.text,
     marginBottom: 12,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   icon: {
@@ -235,7 +200,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.text,
     width: 120,
   },
@@ -250,20 +215,4 @@ const styles = StyleSheet.create({
   negative: {
     color: colors.danger,
   },
-  editButton: {
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 8,
-    margin: 16,
-  },
-  editButtonText: {
-    color: colors.background,
-    fontSize: 18,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
 });
-
