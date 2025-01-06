@@ -1,9 +1,9 @@
 import React, { useContext, useState, useEffect, useMemo } from "react";
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal, TextInput, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal, TextInput, ScrollView, RefreshControl } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { auth, db } from "../../firebase";
-import { router, usePathname } from "expo-router";
-import { collection, getDocs, doc, deleteDoc } from "firebase/firestore";
+import { router } from "expo-router";
+import { collection, getDocs, doc, getDoc, deleteDoc } from "firebase/firestore";
 import Toast from "react-native-toast-message";
 import { SpinnerContext } from "../_layout";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,6 +14,7 @@ interface Unit {
   name: string;
   type: string;
   rate: number;
+  rateFrequency: string;
   ownerId: string;
 }
 
@@ -29,15 +30,38 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<UnitType>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("none");
+  const [fullName, setFullName] = useState<string | null>(null);
   const user = auth.currentUser;
-  const pathname = usePathname();
 
   useEffect(() => {
     if (!user) {
       router.replace("/SignIn");
+    } else {
+      fetchUserFullName();
     }
     fetchUnits();
   }, []);
+
+  const fetchUserFullName = async () => {
+    try {
+      showSpinner();
+      if (!user) {
+        console.error("User is not authenticated");
+        return;
+      }
+      const userDoc = await getDoc(doc(db, "owners", user.uid));
+      if (userDoc.exists()) {
+        const { firstName, lastName } = userDoc.data();
+        setFullName(`${firstName} ${lastName}`); // Combine firstName and lastName
+      } else {
+        console.error("User document not found");
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      hideSpinner();
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -73,6 +97,7 @@ export default function Dashboard() {
           name: data.name,
           type: data.type,
           rate: data.rate,
+          rateFrequency: data.rateFrequency || "Daily",
           ownerId: data.ownerId,
         };
       });
@@ -133,8 +158,16 @@ export default function Dashboard() {
 
   const unitTypes: UnitType[] = ["tricycle", "e-bike", "truck", "others"];
 
-  const Controls = () => (
-    <View style={styles.controlsContainer}>
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Welcome, {fullName ? fullName : "Owner"}!</Text>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={24} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search-outline" size={20} color={colors.muted} style={styles.searchIcon} />
         <TextInput
@@ -146,23 +179,34 @@ export default function Dashboard() {
         />
       </View>
 
+      {/* Filters and Sort Section */}
       <View style={styles.filterSection}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeFilters}>
           <TouchableOpacity
-            style={[styles.filterChip, !selectedType && styles.filterChipActive]}
+            style={[
+              styles.filterChip,
+              !selectedType && styles.filterChipActive
+            ]}
             onPress={() => setSelectedType(null)}
           >
-            <Text style={[styles.filterChipText, !selectedType && styles.filterChipTextActive]}>All</Text>
+            <Text style={[
+              styles.filterChipText,
+              !selectedType && styles.filterChipTextActive
+            ]}>All</Text>
           </TouchableOpacity>
           {unitTypes.map((type) => (
             <TouchableOpacity
               key={type}
-              style={[styles.filterChip, selectedType === type && styles.filterChipActive]}
+              style={[
+                styles.filterChip,
+                selectedType === type && styles.filterChipActive
+              ]}
               onPress={() => setSelectedType(type)}
             >
-              <Text style={[styles.filterChipText, selectedType === type && styles.filterChipTextActive]}>
-                {type ? type.charAt(0).toUpperCase() + type.slice(1) : ""}
-              </Text>
+              <Text style={[
+                styles.filterChipText,
+                selectedType === type && styles.filterChipTextActive
+              ]}>{type ? type.charAt(0).toUpperCase() + type.slice(1) : ""}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -179,7 +223,7 @@ export default function Dashboard() {
           </Picker>
         </View>
       </View>
-
+      
       <TouchableOpacity 
         style={styles.addButton} 
         onPress={() => router.push("/owner/AddUnit")}
@@ -187,19 +231,6 @@ export default function Dashboard() {
         <Ionicons name="add-circle-outline" size={24} color={colors.background} />
         <Text style={styles.addButtonText}>Add New Unit</Text>
       </TouchableOpacity>
-    </View>
-  );
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Welcome, Owner!</Text>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={24} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      <Controls />
 
       <FlatList
         data={filteredAndSortedUnits}
@@ -211,7 +242,7 @@ export default function Dashboard() {
               <View style={styles.typeTag}>
                 <Text style={styles.typeTagText}>{item.type}</Text>
               </View>
-              <Text style={styles.unitInfo}>PHP {item.rate}/day</Text>
+              <Text style={styles.unitInfo}>PHP {item.rate.toFixed(2)} {item.rateFrequency}</Text>
             </View>
             <View style={styles.buttonGroup}>
               <TouchableOpacity 
@@ -244,6 +275,9 @@ export default function Dashboard() {
             <Text style={styles.emptyStateText}>No units found</Text>
           </View>
         }
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={fetchUnits} colors={[colors.primary]} />
+        }
       />
 
       <Modal
@@ -273,30 +307,6 @@ export default function Dashboard() {
           </View>
         </View>
       </Modal>
-
-      <View style={styles.bottomMenu}>
-        <TouchableOpacity
-          style={[styles.menuItem, pathname === "/owner/Dashboard" && styles.activeMenuItem]}
-          onPress={() => router.push("/owner/Dashboard")}
-        >
-          <Ionicons name="grid-outline" size={24} color={pathname === "/owner/Dashboard" ? colors.primary : colors.muted} />
-          <Text style={[styles.menuItemText, pathname === "/owner/Dashboard" && styles.activeMenuItemText]}>Dashboard</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.menuItem, pathname === "/owner/Analytics" && styles.activeMenuItem]}
-          onPress={() => router.push("/owner/Analytics")}
-        >
-          <Ionicons name="bar-chart-outline" size={24} color={pathname === "/owner/Analytics" ? colors.primary : colors.muted} />
-          <Text style={[styles.menuItemText, pathname === "/owner/Analytics" && styles.activeMenuItemText]}>Analytics</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.menuItem, pathname === "/owner/Settings" && styles.activeMenuItem]}
-          onPress={() => router.push("/owner/Settings")}
-        >
-          <Ionicons name="settings-outline" size={24} color={pathname === "/owner/Settings" ? colors.primary : colors.muted} />
-          <Text style={[styles.menuItemText, pathname === "/owner/Settings" && styles.activeMenuItemText]}>Settings</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -305,11 +315,11 @@ const colors = {
   primary: "#393E46",    // Dark grayish blue
   secondary: "#6D9886",  // Sage green
   background: "#F7F7F7", // Pure off-white
-  card: "#F2E7D5",       // Warm beige
-  text: "#393E46",       // Dark grayish blue
-  muted: "#6D9886",      // Sage green
-  border: "#F2E7D5",     // Warm beige
-  danger: "#393E46",     // Dark grayish blue
+  card: "#F2E7D5",      // Warm beige
+  text: "#393E46",      // Dark grayish blue
+  muted: "#6D9886",     // Sage green
+  border: "#F2E7D5",    // Warm beige
+  danger: "#393E46",    // Dark grayish blue
 };
 
 const styles = StyleSheet.create({
@@ -322,7 +332,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
   },
   title: { 
     fontSize: 28,
@@ -331,9 +341,6 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     padding: 8,
-  },
-  controlsContainer: {
-    marginBottom: 16,
   },
   addButton: {
     flexDirection: 'row',
@@ -528,34 +535,6 @@ const styles = StyleSheet.create({
     color: colors.background,
     fontSize: 14,
     fontWeight: '500',
-  },
-  bottomMenu: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingVertical: 10,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  menuItem: {
-    alignItems: 'center',
-  },
-  menuItemText: {
-    fontSize: 12,
-    color: colors.muted,
-    marginTop: 4,
-  },
-  activeMenuItem: {
-    borderTopWidth: 2,
-    borderTopColor: colors.primary,
-  },
-  activeMenuItemText: {
-    color: colors.primary,
   },
 });
 

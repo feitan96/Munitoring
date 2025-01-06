@@ -10,8 +10,6 @@ export default function OwnerLayout() {
         <Stack.Screen name="AddUnit" options={{ title: "AddUnit", headerShown: false }} />
         <Stack.Screen name="EditUnit" options={{ title: "EditUnit", headerShown: false }} />
         <Stack.Screen name="ViewUnit" options={{ title: "ViewUnit", headerShown: false }} />
-        <Stack.Screen name="Settings" options={{ title: "Settings", headerShown: false }} />
-        <Stack.Screen name="Analytics" options={{ title: "Analytics", headerShown: false }} />
         <Toast />
       </Stack>
       <Toast />
