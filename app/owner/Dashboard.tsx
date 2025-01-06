@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect, useMemo } from "react";
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Modal, TextInput, ScrollView, RefreshControl } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { auth, db } from "../../firebase";
-import { router } from "expo-router";
+import { router, usePathname  } from "expo-router";
 import { collection, getDocs, doc, getDoc, deleteDoc } from "firebase/firestore";
 import Toast from "react-native-toast-message";
 import { SpinnerContext } from "../_layout";
@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("none");
   const [fullName, setFullName] = useState<string | null>(null);
   const user = auth.currentUser;
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!user) {
@@ -307,6 +308,30 @@ export default function Dashboard() {
           </View>
         </View>
       </Modal>
+
+      <View style={styles.bottomMenu}>
+        <TouchableOpacity
+          style={[styles.menuItem, pathname === "/owner/Dashboard" && styles.activeMenuItem]}
+          onPress={() => router.push("/owner/Dashboard")}
+        >
+          <Ionicons name="grid-outline" size={24} color={pathname === "/owner/Dashboard" ? colors.primary : colors.muted} />
+          <Text style={[styles.menuItemText, pathname === "/owner/Dashboard" && styles.activeMenuItemText]}>Dashboard</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.menuItem, pathname === "/owner/Analytics" && styles.activeMenuItem]}
+          onPress={() => router.push("/owner/Analytics")}
+        >
+          <Ionicons name="bar-chart-outline" size={24} color={pathname === "/owner/Analytics" ? colors.primary : colors.muted} />
+          <Text style={[styles.menuItemText, pathname === "/owner/Analytics" && styles.activeMenuItemText]}>Analytics</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.menuItem, pathname === "/owner/Settings" && styles.activeMenuItem]}
+          onPress={() => router.push("/owner/Settings")}
+        >
+          <Ionicons name="settings-outline" size={24} color={pathname === "/owner/Settings" ? colors.primary : colors.muted} />
+          <Text style={[styles.menuItemText, pathname === "/owner/Settings" && styles.activeMenuItemText]}>Settings</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -332,7 +357,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   title: { 
     fontSize: 28,
@@ -341,6 +366,14 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     padding: 8,
+  },
+  controlsContainer: {
+    overflow: 'hidden',
+  },
+  toggleButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    marginBottom: 16,
   },
   addButton: {
     flexDirection: 'row',
@@ -535,6 +568,34 @@ const styles = StyleSheet.create({
     color: colors.background,
     fontSize: 14,
     fontWeight: '500',
+  },
+  bottomMenu: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingVertical: 10,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  menuItem: {
+    alignItems: 'center',
+  },
+  menuItemText: {
+    fontSize: 12,
+    color: colors.muted,
+    marginTop: 4,
+  },
+  activeMenuItem: {
+    borderTopWidth: 2,
+    borderTopColor: colors.primary,
+  },
+  activeMenuItemText: {
+    color: colors.primary,
   },
 });
 

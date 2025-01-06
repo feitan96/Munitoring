@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext } from "react";
-import { View, StyleSheet, ActivityIndicator, Modal } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { Stack } from "expo-router";
+import { ActivityIndicator } from "react-native";
 
 export const SpinnerContext = createContext<{
   showSpinner: () => void;
@@ -52,22 +53,32 @@ export default function RootLayout() {
         </Stack>
 
         {/* Global Spinner */}
-        <Modal transparent={true} visible={isSpinnerVisible} animationType="fade">
+        {isSpinnerVisible && (
           <View style={styles.spinnerOverlay}>
-            <ActivityIndicator size="large" color="#0000ff" />
+            <View style={styles.spinnerContainer}>
+              <ActivityIndicator size="large" color="#FFFFFF" />
+            </View>
           </View>
-        </Modal>
+        )}
       </View>
     </SpinnerContext.Provider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  spinnerOverlay: {
+  container: { 
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  spinnerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  spinnerContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 10,
+    padding: 20,
   },
 });
+
