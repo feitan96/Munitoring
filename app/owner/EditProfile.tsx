@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useContext } from "react";
-import { View, Text, TextInput, Button, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../../firebase";
 import Toast from "react-native-toast-message";
 import { SpinnerContext } from "../_layout";
+import Input from "../components/ui/Input";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
 
 export default function EditProfile() {
   const [firstName, setFirstName] = useState("");
@@ -87,59 +90,78 @@ export default function EditProfile() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Edit Profile</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="First Name"
-        value={firstName}
-        onChangeText={setFirstName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Last Name"
-        value={lastName}
-        onChangeText={setLastName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Contact Number"
-        value={contactNumber}
-        onChangeText={setContactNumber}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Address"
-        value={address}
-        onChangeText={setAddress}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        editable={false} // Email should not be editable
-      />
-      <Button title="Save" onPress={handleSave} disabled={loading} />
-    </View>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Card style={styles.card}>
+        <Text style={styles.title}>Owner Profile</Text>
+        <Input
+          label="First Name"
+          placeholder="Enter your first name"
+          value={firstName}
+          onChangeText={setFirstName}
+        />
+        <Input
+          label="Last Name"
+          placeholder="Enter your last name"
+          value={lastName}
+          onChangeText={setLastName}
+        />
+        <Input
+          label="Contact Number"
+          placeholder="Enter your contact number"
+          value={contactNumber}
+          onChangeText={setContactNumber}
+          keyboardType="phone-pad"
+        />
+        <Input
+          label="Address"
+          placeholder="Enter your address"
+          value={address}
+          onChangeText={setAddress}
+          multiline
+          numberOfLines={3}
+          style={styles.multilineInput}
+        />
+        <Input
+          label="Email"
+          placeholder="Your email address"
+          value={email}
+          onChangeText={setEmail}
+          editable={false}
+          style={styles.disabledInput}
+        />
+        <Button
+          title={loading ? "Saving..." : "Save Changes"}
+          onPress={handleSave}
+          disabled={loading}
+        />
+      </Card>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 16,
+    backgroundColor: '#f7fafc',
+  },
+  card: {
+    marginTop: 16,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 16,
+    marginBottom: 24,
+    color: '#2d3748',
+    textAlign: 'center',
   },
-  input: {
-    height: 40,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    marginBottom: 12,
-    paddingHorizontal: 8,
+  multilineInput: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  disabledInput: {
+    backgroundColor: '#edf2f7',
+    color: '#718096',
   },
 });
+
